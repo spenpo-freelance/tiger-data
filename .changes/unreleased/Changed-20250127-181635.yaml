@@ -1,0 +1,3 @@
+kind: Changed
+body: -f flag allows gzip to overwrite the compressed file if it already exists
+time: 2025-01-27T18:16:35.397945+07:00

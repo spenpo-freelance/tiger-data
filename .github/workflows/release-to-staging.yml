@@ -12,46 +12,46 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
       - name: Change to Release Directory
-        uses: ./github/actions/ssh-command
+        uses: ./.github/actions/ssh-command
         with:
           script: |
             cd ${{ secrets.TIGER_GRADES_PATH }}/release
       - name: Content Segmentation
-        uses: ./github/actions/ssh-command
+        uses: ./.github/actions/ssh-command
         with:
           script: |
             wp search-replace 'release.tigergrades.com' 'staging.tigergrades.com' --export=../staging/migration.sql
       - name: Change to Staging Directory
-        uses: ./github/actions/ssh-command
+        uses: ./.github/actions/ssh-command
         with:
           script: |
             cd ../staging
       - name: Export Staging Backup
-        uses: ./github/actions/ssh-command
+        uses: ./.github/actions/ssh-command
         with:
           script: |
             mysqldump -u ${{ secrets.TIGER_GRADES_STAGING_DB_USER }} -p ${{ secrets.TIGER_GRADES_STAGING_DB_PASSWORD }} > backup.sql
       - name: Compress Staging Backup
-        uses: ./github/actions/ssh-command
+        uses: ./.github/actions/ssh-command
         with:
           script: |
             gzip backup.sql
       - name: Encrypt Staging Backup
-        uses: ./github/actions/encrypt
+        uses: ./.github/actions/encrypt
         with:
           file: backup.sql.gz
       - name: Import Release Migration to Staging
-        uses: ./github/actions/ssh-command
+        uses: ./.github/actions/ssh-command
         with:
           script: |
             wp db import migration.sql
       - name: Compress Release Migration
-        uses: ./github/actions/ssh-command
+        uses: ./.github/actions/ssh-command
         with:
           script: |
             gzip migration.sql
       - name: Encrypt Release Migration
-        uses: ./github/actions/encrypt
+        uses: ./.github/actions/encrypt
         with:
           file: migration.sql.gz
       - name: Transfer Staging Backup to GitHub Runner

@@ -80,6 +80,7 @@ jobs:
         with:
           key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
           known_hosts: ${{ secrets.HOSTINGER_KNOWN_HOSTS }}
+          name: ${{ secrets.HOSTINGER_KEY_TYPE }}
           if_key_exists: replace # optional, defaults to fail
       - name: Transfer Staging Backup to GitHub Runner
         run: |

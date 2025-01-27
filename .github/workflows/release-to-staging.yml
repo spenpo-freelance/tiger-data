@@ -77,10 +77,10 @@ jobs:
           file: ${{ secrets.TIGER_GRADES_PATH }}/staging/migration.sql.gz
       - name: Transfer Staging Backup to GitHub Runner
         run: |
-          scp ${{ secrets.HOSTINGER_USERNAME }}@${{ secrets.HOSTINGER_HOST }}:${{ secrets.TIGER_GRADES_PATH }}/staging/backup.sql.gz.enc ./backup/staging/$(date +%Y-%m-%d-%H-%M-%S).sql.gz.enc
+          scp -P ${{ secrets.HOSTINGER_PORT }} ${{ secrets.HOSTINGER_USERNAME }}@${{ secrets.HOSTINGER_HOST }}:${{ secrets.TIGER_GRADES_PATH }}/staging/backup.sql.gz.enc ./backup/staging/$(date +%Y-%m-%d-%H-%M-%S).sql.gz.enc
       - name: Transfer Release Migration to GitHub Runner
         run: |
-          scp ${{ secrets.HOSTINGER_USERNAME }}@${{ secrets.HOSTINGER_HOST }}:${{ secrets.TIGER_GRADES_PATH }}/staging/migration.sql.gz.enc ./migration/staging/$(date +%Y-%m-%d-%H-%M-%S).sql.gz.enc
+          scp -P ${{ secrets.HOSTINGER_PORT }} ${{ secrets.HOSTINGER_USERNAME }}@${{ secrets.HOSTINGER_HOST }}:${{ secrets.TIGER_GRADES_PATH }}/staging/migration.sql.gz.enc ./migration/staging/$(date +%Y-%m-%d-%H-%M-%S).sql.gz.enc
       - name: Commit and Push to git
         run: |
           git config user.name "github-actions[bot]"

@@ -11,15 +11,6 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
-      - name: Change to Release Directory
-        uses: appleboy/ssh-action@v0.1.8
-        with:
-          host: ${{ secrets.HOSTINGER_HOST }}
-          username: ${{ secrets.HOSTINGER_USERNAME }}
-          key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
-          port: ${{ secrets.HOSTINGER_PORT }}
-          script: |
-            cd ${{ secrets.TIGER_GRADES_PATH }}/release
       - name: Content Segmentation
         uses: appleboy/ssh-action@v0.1.8
         with:
@@ -28,16 +19,7 @@ jobs:
           key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
           port: ${{ secrets.HOSTINGER_PORT }}
           script: |
-            wp search-replace 'release.tigergrades.com' 'staging.tigergrades.com' --export=../staging/migration.sql
-      - name: Change to Staging Directory
-        uses: appleboy/ssh-action@v0.1.8
-        with:
-          host: ${{ secrets.HOSTINGER_HOST }}
-          username: ${{ secrets.HOSTINGER_USERNAME }}
-          key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
-          port: ${{ secrets.HOSTINGER_PORT }}
-          script: |
-            cd ../staging
+            wp search-replace 'release.tigergrades.com' 'staging.tigergrades.com' --export=../staging/migration.sql --skip-columns=guid --skip-tables=wp_users --path=${{ secrets.TIGER_GRADES_PATH }}/release
       - name: Export Staging Backup
         uses: appleboy/ssh-action@v0.1.8
         with:
@@ -46,7 +28,8 @@ jobs:
           key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
           port: ${{ secrets.HOSTINGER_PORT }}
           script: |
-            mysqldump -u ${{ secrets.TIGER_GRADES_STAGING_DB_USER }} -p ${{ secrets.TIGER_GRADES_STAGING_DB_PASSWORD }} > backup.sql
+            mysqldump -u ${{ secrets.TIGER_GRADES_STAGING_DB_USER }} -p ${{ secrets.TIGER_GRADES_STAGING_DB_PASSWORD }} > backup.sql --path=${{ secrets.TIGER_GRADES_PATH }}/staging
+          # --skip-triggers --skip-lock-tables --skip-add-drop-table --skip-add-locks --skip-create-options --skip-comments --skip-create-info --skip-drop-table --skip-extended-insert --skip-insert --skip-lock-tables --skip-quick --skip-replace --skip-set-charset --skip-triggers --skip-use-frm --skip-where --skip-add-drop-table --skip-add-locks --skip-create-options --skip-comments --skip-create-info --skip-drop-table --skip-extended-insert --skip-insert --skip-lock-tables --skip-quick --skip-replace --skip-set-charset --skip-triggers --skip-use-frm --skip-where
       - name: Compress Staging Backup
         uses: appleboy/ssh-action@v0.1.8
         with:
@@ -55,6 +38,7 @@ jobs:
           key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
           port: ${{ secrets.HOSTINGER_PORT }}
           script: |
+            cd ${{ secrets.TIGER_GRADES_PATH }}/staging
             gzip backup.sql
       - name: Encrypt Staging Backup
         uses: ./.github/actions/encrypt
@@ -63,7 +47,7 @@ jobs:
           username: ${{ secrets.HOSTINGER_USERNAME }}
           key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
           port: ${{ secrets.HOSTINGER_PORT }}
-          file: backup.sql.gz
+          file: ${{ secrets.TIGER_GRADES_PATH }}/staging/backup.sql.gz
       - name: Import Release Migration to Staging
         uses: appleboy/ssh-action@v0.1.8
         with:
@@ -72,7 +56,7 @@ jobs:
           key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
           port: ${{ secrets.HOSTINGER_PORT }}
           script: |
-            wp db import migration.sql
+            wp db import ${{ secrets.TIGER_GRADES_PATH }}/staging/migration.sql --path=${{ secrets.TIGER_GRADES_PATH }}/staging
       - name: Compress Release Migration
         uses: appleboy/ssh-action@v0.1.8
         with:
@@ -81,6 +65,7 @@ jobs:
           key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
           port: ${{ secrets.HOSTINGER_PORT }}
           script: |
+            cd ${{ secrets.TIGER_GRADES_PATH }}/staging
             gzip migration.sql
       - name: Encrypt Release Migration
         uses: ./.github/actions/encrypt
@@ -89,7 +74,7 @@ jobs:
           username: ${{ secrets.HOSTINGER_USERNAME }}
           key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
           port: ${{ secrets.HOSTINGER_PORT }}
-          file: migration.sql.gz
+          file: ${{ secrets.TIGER_GRADES_PATH }}/staging/migration.sql.gz
       - name: Transfer Staging Backup to GitHub Runner
         run: |
           scp ${{ secrets.HOSTINGER_USERNAME }}@${{ secrets.HOSTINGER_HOST }}:${{ secrets.TIGER_GRADES_PATH }}/staging/backup.sql.gz.enc ./backup/staging/$(date +%Y-%m-%d-%H-%M-%S).sql.gz.enc

@@ -20,14 +20,14 @@ runs:
   using: "composite"
   steps:
     - name: Encrypt File
-        uses: appleboy/ssh-action@v0.1.8
-        with:
-          host: ${{ inputs.host }}
-          username: ${{ inputs.username }}
-          key: ${{ inputs.key }}
-          port: ${{ inputs.port }}
-          script: |
-            openssl enc -aes-256-cbc -iter 100000 -pbkdf2 -salt \
-            -in ${{ inputs.file }} \
-            -out ${{ inputs.file }}.enc \
-            -pass pass:$TIGER_GRADES_ENCRYPTION_PASSWORD
+      uses: appleboy/ssh-action@v0.1.8
+      with:
+        host: ${{ inputs.host }}
+        username: ${{ inputs.username }}
+        key: ${{ inputs.key }}
+        port: ${{ inputs.port }}
+        script: |
+          openssl enc -aes-256-cbc -iter 100000 -pbkdf2 -salt \
+          -in ${{ inputs.file }} \
+          -out ${{ inputs.file }}.enc \
+          -pass pass:$TIGER_GRADES_ENCRYPTION_PASSWORD

@@ -19,7 +19,7 @@ jobs:
           key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
           port: ${{ secrets.HOSTINGER_PORT }}
           script: |
-            wp search-replace 'release.tigergrades.com' 'staging.tigergrades.com' --export=../staging/migration.sql --skip-columns=guid --skip-tables=wp_users --path=${{ secrets.TIGER_GRADES_PATH }}/release
+            wp search-replace 'release.tigergrades.com' 'staging.tigergrades.com' --export=${{ secrets.TIGER_GRADES_PATH }}/staging/migration.sql --skip-columns=guid --skip-tables=wp_users --path=${{ secrets.TIGER_GRADES_PATH }}/release
       - name: Export Staging Backup
         uses: appleboy/ssh-action@v0.1.8
         with:

@@ -11,7 +11,7 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
-      - name: Content Segmentation
+      - name: Content Segmentation of Release Candidate Data
         uses: appleboy/ssh-action@v0.1.8
         with:
           host: ${{ secrets.HOSTINGER_HOST }}
@@ -28,7 +28,7 @@ jobs:
           key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
           port: ${{ secrets.HOSTINGER_PORT }}
           script: |
-            mysqldump -u ${{ secrets.TIGER_GRADES_STAGING_DB_USER }} -p ${{ secrets.TIGER_GRADES_STAGING_DB_PASSWORD }} > backup.sql --path=${{ secrets.TIGER_GRADES_PATH }}/staging
+            wp db export ${{ secrets.TIGER_GRADES_PATH }}/staging/backup.sql --path=${{ secrets.TIGER_GRADES_PATH }}/staging
           # --skip-triggers --skip-lock-tables --skip-add-drop-table --skip-add-locks --skip-create-options --skip-comments --skip-create-info --skip-drop-table --skip-extended-insert --skip-insert --skip-lock-tables --skip-quick --skip-replace --skip-set-charset --skip-triggers --skip-use-frm --skip-where --skip-add-drop-table --skip-add-locks --skip-create-options --skip-comments --skip-create-info --skip-drop-table --skip-extended-insert --skip-insert --skip-lock-tables --skip-quick --skip-replace --skip-set-charset --skip-triggers --skip-use-frm --skip-where
       - name: Compress Staging Backup
         uses: appleboy/ssh-action@v0.1.8

@@ -75,15 +75,15 @@ jobs:
           key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
           port: ${{ secrets.HOSTINGER_PORT }}
           file: ${{ secrets.TIGER_GRADES_PATH }}/staging/migration.sql.gz
-      - name: Transfer Staging Backup to GitHub Runner
-        run: |
-          scp -i ${{ secrets.HOSTINGER_PRIVATE_KEY }} -P ${{ secrets.HOSTINGER_PORT }} ${{ secrets.HOSTINGER_USERNAME }}@${{ secrets.HOSTINGER_HOST }}:${{ secrets.TIGER_GRADES_PATH }}/staging/backup.sql.gz.enc ./backup/staging/$(date +%Y-%m-%d-%H-%M-%S).sql.gz.enc
       - name: Install SSH key
         uses: shimataro/ssh-key-action@v2
         with:
           key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
           known_hosts: ${{ secrets.HOSTINGER_KNOWN_HOSTS }}
           if_key_exists: replace # optional, defaults to fail
+      - name: Transfer Staging Backup to GitHub Runner
+        run: |
+          scp -P ${{ secrets.HOSTINGER_PORT }} ${{ secrets.HOSTINGER_USERNAME }}@${{ secrets.HOSTINGER_HOST }}:${{ secrets.TIGER_GRADES_PATH }}/staging/backup.sql.gz.enc ./backup/staging/$(date +%Y-%m-%d-%H-%M-%S).sql.gz.enc
       - name: Transfer Release Migration to GitHub Runner
         run: |
           scp -P ${{ secrets.HOSTINGER_PORT }} ${{ secrets.HOSTINGER_USERNAME }}@${{ secrets.HOSTINGER_HOST }}:${{ secrets.TIGER_GRADES_PATH }}/staging/migration.sql.gz.enc ./migration/staging/$(date +%Y-%m-%d-%H-%M-%S).sql.gz.enc

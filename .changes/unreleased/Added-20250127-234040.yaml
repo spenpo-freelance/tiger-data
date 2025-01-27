@@ -1,0 +1,3 @@
+kind: Added
+body: workflow step that installs ssh key for shell commands
+time: 2025-01-27T23:40:40.495548+07:00

@@ -90,9 +90,10 @@ jobs:
           ssh-add -l
       - name: Debug SSH key
         run: |
-          eval `ssh-agent -s`
-          ssh-add ~/.ssh/${{ secrets.HOSTINGER_KEY_TYPE }}
-          ssh -v -p ${{ secrets.HOSTINGER_PORT }} ${{ secrets.HOSTINGER_USERNAME }}@${{ secrets.HOSTINGER_HOST }} "pwd"
+          cat ~/.ssh/known_hosts
+          echo "---"
+          ssh-keyscan -p ${{ secrets.HOSTINGER_PORT }} ${{ secrets.HOSTINGER_HOST }} >> temp_known_hosts
+          cat temp_known_hosts
       - name: Transfer Staging Backup to GitHub Runner
         run: |
           eval `ssh-agent -s`

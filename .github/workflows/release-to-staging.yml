@@ -82,9 +82,16 @@ jobs:
           known_hosts: ${{ secrets.HOSTINGER_KNOWN_HOSTS }}
           name: ${{ secrets.HOSTINGER_KEY_TYPE }}
           if_key_exists: replace # optional, defaults to fail
+      - name: Check SSH key
+        run: |
+          ls -la ~/.ssh/
+          ssh-add -l
+      - name: Debug SSH key
+        run: |
+          ssh -v -p ${{ secrets.HOSTINGER_PORT }} ${{ secrets.HOSTINGER_USERNAME }}@${{ secrets.HOSTINGER_HOST }} "pwd"
       - name: Transfer Staging Backup to GitHub Runner
         run: |
-          scp -P ${{ secrets.HOSTINGER_PORT }} ${{ secrets.HOSTINGER_USERNAME }}@${{ secrets.HOSTINGER_HOST }}:${{ secrets.TIGER_GRADES_PATH }}/staging/backup.sql.gz.enc ./backup/staging/$(date +%Y-%m-%d-%H-%M-%S).sql.gz.enc
+          scp -v -P ${{ secrets.HOSTINGER_PORT }} ${{ secrets.HOSTINGER_USERNAME }}@${{ secrets.HOSTINGER_HOST }}:${{ secrets.TIGER_GRADES_PATH }}/staging/backup.sql.gz.enc ./backup/staging/$(date +%Y-%m-%d-%H-%M-%S).sql.gz.enc
       - name: Transfer Release Migration to GitHub Runner
         run: |
           scp -P ${{ secrets.HOSTINGER_PORT }} ${{ secrets.HOSTINGER_USERNAME }}@${{ secrets.HOSTINGER_HOST }}:${{ secrets.TIGER_GRADES_PATH }}/staging/migration.sql.gz.enc ./migration/staging/$(date +%Y-%m-%d-%H-%M-%S).sql.gz.enc

@@ -81,19 +81,6 @@ jobs:
           key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
           known_hosts: ${{ secrets.HOSTINGER_KNOWN_HOSTS }}
           name: ${{ secrets.HOSTINGER_KEY_TYPE }}
-          if_key_exists: replace # optional, defaults to fail
-      - name: Check SSH key
-        run: |
-          eval `ssh-agent -s`
-          ssh-add ~/.ssh/${{ secrets.HOSTINGER_KEY_TYPE }}
-          ls -la ~/.ssh/
-          ssh-add -l
-      - name: Debug SSH key
-        run: |
-          cat ~/.ssh/known_hosts
-          echo "---"
-          ssh-keyscan -p ${{ secrets.HOSTINGER_PORT }} ${{ secrets.HOSTINGER_HOST }} >> temp_known_hosts
-          cat temp_known_hosts
       - name: Transfer Staging Backup to GitHub Runner
         run: |
           eval `ssh-agent -s`
@@ -105,6 +92,7 @@ jobs:
           eval `ssh-agent -s`
           ssh-add ~/.ssh/${{ secrets.HOSTINGER_KEY_TYPE }}
           ssh-keyscan -p ${{ secrets.HOSTINGER_PORT }} -H ${{ secrets.HOSTINGER_HOST }} >> ~/.ssh/known_hosts
+          scp -v -P ${{ secrets.HOSTINGER_PORT }} ${{ secrets.HOSTINGER_USERNAME }}@${{ secrets.HOSTINGER_HOST }}:${{ secrets.TIGER_GRADES_PATH }}/staging/migration.sql.gz.enc ./migration/staging/$(date +%Y-%m-%d-%H-%M-%S).sql.gz.enc
       - name: Configure Git
         run: |
           git config --global user.name "github-actions[bot]"

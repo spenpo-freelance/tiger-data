@@ -98,6 +98,7 @@ jobs:
         run: |
           eval `ssh-agent -s`
           ssh-add ~/.ssh/${{ secrets.HOSTINGER_KEY_TYPE }}
+          ssh-keyscan -p ${{ secrets.HOSTINGER_PORT }} -H ${{ secrets.HOSTINGER_HOST }} >> ~/.ssh/known_hosts
           scp -v -P ${{ secrets.HOSTINGER_PORT }} ${{ secrets.HOSTINGER_USERNAME }}@${{ secrets.HOSTINGER_HOST }}:${{ secrets.TIGER_GRADES_PATH }}/staging/backup.sql.gz.enc ./backup/staging/$(date +%Y-%m-%d-%H-%M-%S).sql.gz.enc
       - name: Transfer Release Migration to GitHub Runner
         run: |

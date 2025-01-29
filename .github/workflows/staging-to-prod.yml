@@ -1,0 +1,211 @@
+name: Migrate Staging to Production
+
+on:
+  workflow_dispatch: # Allows manual triggers as needed
+
+jobs:
+  deploy-and-backup:
+    runs-on: ubuntu-latest
+    steps:
+      # Setup steps
+      - name: Checkout Code
+        uses: actions/checkout@v3
+        
+      - name: Install SSH key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
+          known_hosts: ${{ secrets.HOSTINGER_KNOWN_HOSTS }}
+          name: ${{ secrets.HOSTINGER_KEY_TYPE }}
+
+      - name: Enable Maintenance Mode
+        uses: appleboy/ssh-action@v0.1.8
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
+          port: ${{ secrets.HOSTINGER_PORT }}
+          script: |
+            wp maintenance-mode activate --path=${{ secrets.TIGER_GRADES_PATH }}
+
+      # Content Sync steps
+      - name: Sync Content from Staging to Production
+        uses: appleboy/ssh-action@v0.1.8
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
+          port: ${{ secrets.HOSTINGER_PORT }}
+          script: |
+            rsync -avz --delete ${{ secrets.TIGER_GRADES_PATH }}/staging/wp-content/themes/ ${{ secrets.TIGER_GRADES_PATH }}/wp-content/themes/
+            rsync -avz --delete ${{ secrets.TIGER_GRADES_PATH }}/staging/wp-content/plugins/ ${{ secrets.TIGER_GRADES_PATH }}/wp-content/plugins/
+            rsync -avz --delete ${{ secrets.TIGER_GRADES_PATH }}/staging/wp-content/uploads/ ${{ secrets.TIGER_GRADES_PATH }}/wp-content/uploads/
+            rsync -avz --delete ${{ secrets.TIGER_GRADES_PATH }}/staging/wp-content/languages/ ${{ secrets.TIGER_GRADES_PATH }}/wp-content/languages/
+            rsync -avz --delete ${{ secrets.TIGER_GRADES_PATH }}/staging/wp-content/mu-plugins/ ${{ secrets.TIGER_GRADES_PATH }}/wp-content/mu-plugins/
+
+      # Backup steps
+      - name: Export Production Backup
+        uses: appleboy/ssh-action@v0.1.8
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
+          port: ${{ secrets.HOSTINGER_PORT }}
+          script: |
+            wp db export ${{ secrets.TIGER_GRADES_PATH }}/backup.sql \
+            --path=${{ secrets.TIGER_GRADES_PATH }}
+
+      # Migration steps
+      - name: Content Segmentation of Release Candidate Data
+        uses: appleboy/ssh-action@v0.1.8
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
+          port: ${{ secrets.HOSTINGER_PORT }}
+          script: |
+            wp search-replace 'staging.tigergrades.com' 'tigergrades.com' \
+            --export=${{ secrets.TIGER_GRADES_PATH }}/migration.sql \
+            --path=${{ secrets.TIGER_GRADES_PATH }}/staging \
+            --skip-columns=guid \
+            --skip-tables=wp_users
+      - name: Import Staging Migration to Production
+        uses: appleboy/ssh-action@v0.1.8
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
+          port: ${{ secrets.HOSTINGER_PORT }}
+          script: |
+            wp db import ${{ secrets.TIGER_GRADES_PATH }}/migration.sql \
+            --path=${{ secrets.TIGER_GRADES_PATH }}
+
+      - name: Verify Production Site
+        id: site_verification
+        uses: appleboy/ssh-action@v0.1.8
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
+          port: ${{ secrets.HOSTINGER_PORT }}
+          script: |
+            # Check if WordPress is responding
+            if ! wp core is-installed --path=${{ secrets.TIGER_GRADES_PATH }}; then
+              echo "WordPress installation check failed"
+              exit 1
+            fi
+            
+            # Get the site URL and check if it's accessible
+            SITE_URL=$(wp option get siteurl --path=${{ secrets.TIGER_GRADES_PATH }})
+            if ! curl -f -s -o /dev/null "$SITE_URL"; then
+              echo "Homepage accessibility check failed"
+              exit 1
+            fi
+
+      - name: Rollback on Failure
+        if: failure() && steps.site_verification.outcome == 'failure'
+        uses: appleboy/ssh-action@v0.1.8
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
+          port: ${{ secrets.HOSTINGER_PORT }}
+          script: |
+            echo "🔄 Starting rollback procedure..."
+            
+            # Restore the database from backup
+            wp db import ${{ secrets.TIGER_GRADES_PATH }}/backup.sql \
+            --path=${{ secrets.TIGER_GRADES_PATH }}
+            
+            # Clear any caches
+            wp cache flush --path=${{ secrets.TIGER_GRADES_PATH }}
+            
+            echo "⚠️ Site has been rolled back to previous state"
+            
+            # Notify about rollback (you might want to replace this with your preferred notification method)
+            echo "::warning::Production deployment failed health check - automatic rollback completed"
+
+      - name: Disable Maintenance Mode
+        if: always()  # Ensures this runs even after rollback
+        uses: appleboy/ssh-action@v0.1.8
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
+          port: ${{ secrets.HOSTINGER_PORT }}
+          script: |
+            wp maintenance-mode deactivate --path=${{ secrets.TIGER_GRADES_PATH }}
+
+      # Artifact handling steps
+      ## Backup
+      - name: Compress Production Backup
+        uses: ./.github/actions/compress
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
+          port: ${{ secrets.HOSTINGER_PORT }}
+          path: ${{ secrets.TIGER_GRADES_PATH }}
+          file: backup.sql
+      - name: Encrypt Production Backup
+        uses: ./.github/actions/encrypt
+        env:
+          ENCRYPTION_PASSWORD: ${{ secrets.TIGER_GRADES_ENCRYPTION_PASSWORD }}
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
+          port: ${{ secrets.HOSTINGER_PORT }}
+          file: ${{ secrets.TIGER_GRADES_PATH }}/backup.sql.gz
+      - name: Transfer Production Backup to GitHub Runner
+        uses: ./.github/actions/scp
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          key_type: ${{ secrets.HOSTINGER_KEY_TYPE }}
+          port: ${{ secrets.HOSTINGER_PORT }}
+          remote_path: ${{ secrets.TIGER_GRADES_PATH }}
+          source_path: ./backup/production
+          file: backup.sql.gz.enc
+
+      ## Migration
+      - name: Compress Staging Migration
+        uses: ./.github/actions/compress
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
+          port: ${{ secrets.HOSTINGER_PORT }}
+          path: ${{ secrets.TIGER_GRADES_PATH }}
+          file: migration.sql
+      - name: Encrypt Staging Migration
+        uses: ./.github/actions/encrypt
+        env:
+          ENCRYPTION_PASSWORD: ${{ secrets.TIGER_GRADES_ENCRYPTION_PASSWORD }}
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
+          port: ${{ secrets.HOSTINGER_PORT }}
+          file: ${{ secrets.TIGER_GRADES_PATH }}/migration.sql.gz
+      - name: Transfer Staging Migration to GitHub Runner
+        uses: ./.github/actions/scp
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          key_type: ${{ secrets.HOSTINGER_KEY_TYPE }}
+          port: ${{ secrets.HOSTINGER_PORT }}
+          remote_path: ${{ secrets.TIGER_GRADES_PATH }}
+          source_path: ./migration/production
+          file: migration.sql.gz.enc
+
+      ## Git
+      - name: Configure Git and Push Changes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "Migrate Staging to Production Workflow"
+          git push origin HEAD:${{ github.ref }}

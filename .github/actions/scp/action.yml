@@ -28,4 +28,4 @@ runs:
         eval `ssh-agent -s`
         ssh-add ~/.ssh/${{ inputs.key_type }}
         ssh-keyscan -p ${{ inputs.port }} -H ${{ inputs.host }} >> ~/.ssh/known_hosts
-        scp -P ${{ inputs.port }} ${{ inputs.username }}@${{ inputs.host }}:${{ inputs.path }}/${{ inputs.file }} ./${{ inputs.path }}/$(date +%Y-%m-%d-%H-%M-%S).sql.gz.enc
+        scp -P ${{ inputs.port }} ${{ inputs.username }}@${{ inputs.host }}:${{ inputs.remote_path }}/${{ inputs.file }} ./${{ inputs.source_path }}/$(date +%Y-%m-%d-%H-%M-%S).sql.gz.enc

@@ -83,7 +83,8 @@ jobs:
           username: ${{ secrets.HOSTINGER_USERNAME }}
           key_type: ${{ secrets.HOSTINGER_KEY_TYPE }}
           port: ${{ secrets.HOSTINGER_PORT }}
-          path: ${{ secrets.TIGER_GRADES_PATH }}/staging
+          remote_path: ${{ secrets.TIGER_GRADES_PATH }}/staging
+          source_path: ./backup/staging
           file: backup.sql.gz.enc
 
       ## Migration
@@ -113,7 +114,8 @@ jobs:
           username: ${{ secrets.HOSTINGER_USERNAME }}
           key_type: ${{ secrets.HOSTINGER_KEY_TYPE }}
           port: ${{ secrets.HOSTINGER_PORT }}
-          path: ${{ secrets.TIGER_GRADES_PATH }}/staging
+          remote_path: ${{ secrets.TIGER_GRADES_PATH }}/staging
+          source_path: ./migration/staging
           file: migration.sql.gz.enc
 
       ## Git

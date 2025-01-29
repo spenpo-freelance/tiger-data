@@ -4,11 +4,33 @@ on:
   workflow_dispatch: # Allows manual triggers as needed
 
 jobs:
-  deploy:
+  deploy-and-backup:
     runs-on: ubuntu-latest
     steps:
+      # Setup steps
       - name: Checkout Code
         uses: actions/checkout@v3
+        
+      - name: Install SSH key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
+          known_hosts: ${{ secrets.HOSTINGER_KNOWN_HOSTS }}
+          name: ${{ secrets.HOSTINGER_KEY_TYPE }}
+
+      # Backup steps
+      - name: Export Staging Backup
+        uses: appleboy/ssh-action@v0.1.8
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
+          port: ${{ secrets.HOSTINGER_PORT }}
+          script: |
+            wp db export ${{ secrets.TIGER_GRADES_PATH }}/staging/backup.sql \
+            --path=${{ secrets.TIGER_GRADES_PATH }}/staging
+
+      # Migration steps
       - name: Content Segmentation of Release Candidate Data
         uses: appleboy/ssh-action@v0.1.8
         with:
@@ -22,7 +44,7 @@ jobs:
             --path=${{ secrets.TIGER_GRADES_PATH }}/release \
             --skip-columns=guid \
             --skip-tables=wp_users
-      - name: Export Staging Backup
+      - name: Import Release Migration to Staging
         uses: appleboy/ssh-action@v0.1.8
         with:
           host: ${{ secrets.HOSTINGER_HOST }}
@@ -30,9 +52,11 @@ jobs:
           key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
           port: ${{ secrets.HOSTINGER_PORT }}
           script: |
-            wp db export ${{ secrets.TIGER_GRADES_PATH }}/staging/backup.sql \
+            wp db import ${{ secrets.TIGER_GRADES_PATH }}/staging/migration.sql \
             --path=${{ secrets.TIGER_GRADES_PATH }}/staging
-          # --skip-triggers --skip-lock-tables --skip-add-drop-table --skip-add-locks --skip-create-options --skip-comments --skip-create-info --skip-drop-table --skip-extended-insert --skip-insert --skip-lock-tables --skip-quick --skip-replace --skip-set-charset --skip-triggers --skip-use-frm --skip-where --skip-add-drop-table --skip-add-locks --skip-create-options --skip-comments --skip-create-info --skip-drop-table --skip-extended-insert --skip-insert --skip-lock-tables --skip-quick --skip-replace --skip-set-charset --skip-triggers --skip-use-frm --skip-where
+
+      # Artifact handling steps
+      ## Backup
       - name: Compress Staging Backup
         uses: ./.github/actions/compress
         with:
@@ -52,16 +76,17 @@ jobs:
           key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
           port: ${{ secrets.HOSTINGER_PORT }}
           file: ${{ secrets.TIGER_GRADES_PATH }}/staging/backup.sql.gz
-      - name: Import Release Migration to Staging
-        uses: appleboy/ssh-action@v0.1.8
+      - name: Transfer Staging Backup to GitHub Runner
+        uses: ./.github/actions/scp
         with:
           host: ${{ secrets.HOSTINGER_HOST }}
           username: ${{ secrets.HOSTINGER_USERNAME }}
-          key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
+          key_type: ${{ secrets.HOSTINGER_KEY_TYPE }}
           port: ${{ secrets.HOSTINGER_PORT }}
-          script: |
-            wp db import ${{ secrets.TIGER_GRADES_PATH }}/staging/migration.sql \
-            --path=${{ secrets.TIGER_GRADES_PATH }}/staging
+          path: ${{ secrets.TIGER_GRADES_PATH }}/staging
+          file: backup.sql.gz.enc
+
+      ## Migration
       - name: Compress Release Migration
         uses: ./.github/actions/compress
         with:
@@ -81,21 +106,6 @@ jobs:
           key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
           port: ${{ secrets.HOSTINGER_PORT }}
           file: ${{ secrets.TIGER_GRADES_PATH }}/staging/migration.sql.gz
-      - name: Install SSH key
-        uses: shimataro/ssh-key-action@v2
-        with:
-          key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
-          known_hosts: ${{ secrets.HOSTINGER_KNOWN_HOSTS }}
-          name: ${{ secrets.HOSTINGER_KEY_TYPE }}
-      - name: Transfer Staging Backup to GitHub Runner
-        uses: ./.github/actions/scp
-        with:
-          host: ${{ secrets.HOSTINGER_HOST }}
-          username: ${{ secrets.HOSTINGER_USERNAME }}
-          key_type: ${{ secrets.HOSTINGER_KEY_TYPE }}
-          port: ${{ secrets.HOSTINGER_PORT }}
-          path: ${{ secrets.TIGER_GRADES_PATH }}/staging
-          file: backup.sql.gz.enc
       - name: Transfer Release Migration to GitHub Runner
         uses: ./.github/actions/scp
         with:
@@ -105,14 +115,14 @@ jobs:
           port: ${{ secrets.HOSTINGER_PORT }}
           path: ${{ secrets.TIGER_GRADES_PATH }}/staging
           file: migration.sql.gz.enc
-      - name: Configure Git
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-      - name: Commit and Push changes
+
+      ## Git
+      - name: Configure Git and Push Changes
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add .
           git commit -m "Migrate Release Candidate to Staging Workflow"
           git push origin HEAD:${{ github.ref }}

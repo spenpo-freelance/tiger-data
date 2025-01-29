@@ -23,6 +23,7 @@ runs:
   using: "composite"
   steps:
     - name: Transfer File
+      shell: bash
       run: |
         eval `ssh-agent -s`
         ssh-add ~/.ssh/${{ inputs.key_type }}

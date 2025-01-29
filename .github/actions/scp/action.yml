@@ -16,8 +16,11 @@ inputs:
   file:
     description: "File to transfer"
     required: true
-  path:
-    description: "Path to the file"
+  remote_path:
+    description: "Path to the file on the remote server"
+    required: true
+  source_path:
+    description: "Path to the file on the GitHub Actions runner"
     required: true
 runs:
   using: "composite"

@@ -1,0 +1,30 @@
+name: "scp command"
+description: "Transfer a file to a remote server using scp"
+inputs:
+  host:
+    description: "Hosting provider host"
+    required: true
+  username:
+    description: "Hosting provider username"
+    required: true
+  key_type:
+    description: "Hosting provider private key type"
+    required: true
+  port:
+    description: "Hosting provider port"
+    required: true
+  file:
+    description: "File to transfer"
+    required: true
+  path:
+    description: "Path to the file"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Transfer File
+      run: |
+          eval `ssh-agent -s`
+          ssh-add ~/.ssh/${{ inputs.key_type }}
+          ssh-keyscan -p ${{ inputs.port }} -H ${{ inputs.host }} >> ~/.ssh/known_hosts
+          scp -P ${{ inputs.port }} ${{ inputs.username }}@${{ inputs.host }}:${{ inputs.path }}/${{ inputs.file }} ./${{ inputs.path }}/$(date +%Y-%m-%d-%H-%M-%S).sql.gz.enc

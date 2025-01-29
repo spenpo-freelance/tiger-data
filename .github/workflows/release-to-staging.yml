@@ -30,7 +30,8 @@ jobs:
           key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
           port: ${{ secrets.HOSTINGER_PORT }}
           script: |
-            wp db export ${{ secrets.TIGER_GRADES_PATH }}/staging/backup.sql --path=${{ secrets.TIGER_GRADES_PATH }}/staging
+            wp db export ${{ secrets.TIGER_GRADES_PATH }}/staging/backup.sql \
+            --path=${{ secrets.TIGER_GRADES_PATH }}/staging
           # --skip-triggers --skip-lock-tables --skip-add-drop-table --skip-add-locks --skip-create-options --skip-comments --skip-create-info --skip-drop-table --skip-extended-insert --skip-insert --skip-lock-tables --skip-quick --skip-replace --skip-set-charset --skip-triggers --skip-use-frm --skip-where --skip-add-drop-table --skip-add-locks --skip-create-options --skip-comments --skip-create-info --skip-drop-table --skip-extended-insert --skip-insert --skip-lock-tables --skip-quick --skip-replace --skip-set-charset --skip-triggers --skip-use-frm --skip-where
       - name: Compress Staging Backup
         uses: ./.github/actions/compress
@@ -59,7 +60,8 @@ jobs:
           key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
           port: ${{ secrets.HOSTINGER_PORT }}
           script: |
-            wp db import ${{ secrets.TIGER_GRADES_PATH }}/staging/migration.sql --path=${{ secrets.TIGER_GRADES_PATH }}/staging
+            wp db import ${{ secrets.TIGER_GRADES_PATH }}/staging/migration.sql \
+            --path=${{ secrets.TIGER_GRADES_PATH }}/staging
       - name: Compress Release Migration
         uses: ./.github/actions/compress
         with:
@@ -86,17 +88,23 @@ jobs:
           known_hosts: ${{ secrets.HOSTINGER_KNOWN_HOSTS }}
           name: ${{ secrets.HOSTINGER_KEY_TYPE }}
       - name: Transfer Staging Backup to GitHub Runner
-        run: |
-          eval `ssh-agent -s`
-          ssh-add ~/.ssh/${{ secrets.HOSTINGER_KEY_TYPE }}
-          ssh-keyscan -p ${{ secrets.HOSTINGER_PORT }} -H ${{ secrets.HOSTINGER_HOST }} >> ~/.ssh/known_hosts
-          scp -P ${{ secrets.HOSTINGER_PORT }} ${{ secrets.HOSTINGER_USERNAME }}@${{ secrets.HOSTINGER_HOST }}:${{ secrets.TIGER_GRADES_PATH }}/staging/backup.sql.gz.enc ./backup/staging/$(date +%Y-%m-%d-%H-%M-%S).sql.gz.enc
+        uses: ./.github/actions/scp
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          key_type: ${{ secrets.HOSTINGER_KEY_TYPE }}
+          port: ${{ secrets.HOSTINGER_PORT }}
+          path: ${{ secrets.TIGER_GRADES_PATH }}/staging
+          file: backup.sql.gz.enc
       - name: Transfer Release Migration to GitHub Runner
-        run: |
-          eval `ssh-agent -s`
-          ssh-add ~/.ssh/${{ secrets.HOSTINGER_KEY_TYPE }}
-          ssh-keyscan -p ${{ secrets.HOSTINGER_PORT }} -H ${{ secrets.HOSTINGER_HOST }} >> ~/.ssh/known_hosts
-          scp -P ${{ secrets.HOSTINGER_PORT }} ${{ secrets.HOSTINGER_USERNAME }}@${{ secrets.HOSTINGER_HOST }}:${{ secrets.TIGER_GRADES_PATH }}/staging/migration.sql.gz.enc ./migration/staging/$(date +%Y-%m-%d-%H-%M-%S).sql.gz.enc
+        uses: ./.github/actions/scp
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          key_type: ${{ secrets.HOSTINGER_KEY_TYPE }}
+          port: ${{ secrets.HOSTINGER_PORT }}
+          path: ${{ secrets.TIGER_GRADES_PATH }}/staging
+          file: migration.sql.gz.enc
       - name: Configure Git
         run: |
           git config --global user.name "github-actions[bot]"

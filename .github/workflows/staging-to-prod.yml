@@ -68,7 +68,7 @@ jobs:
             --export=${{ secrets.TIGER_GRADES_PATH }}/migration.sql \
             --path=${{ secrets.TIGER_GRADES_PATH }}/staging \
             --skip-columns=guid \
-            --skip-tables=wp_users
+            --skip-tables=wp_comments,wp_commentmeta,wp_lightspeed_url,wp_lightspeed_url_file,wp_user_registration_sessions
       - name: Import Staging Migration to Production
         uses: appleboy/ssh-action@v0.1.8
         with:

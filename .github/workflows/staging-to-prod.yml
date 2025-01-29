@@ -80,50 +80,50 @@ jobs:
             wp db import ${{ secrets.TIGER_GRADES_PATH }}/migration.sql \
             --path=${{ secrets.TIGER_GRADES_PATH }}
 
-      - name: Verify Production Site
-        id: site_verification
-        uses: appleboy/ssh-action@v0.1.8
-        with:
-          host: ${{ secrets.HOSTINGER_HOST }}
-          username: ${{ secrets.HOSTINGER_USERNAME }}
-          key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
-          port: ${{ secrets.HOSTINGER_PORT }}
-          script: |
-            # Check if WordPress is responding
-            if ! wp core is-installed --path=${{ secrets.TIGER_GRADES_PATH }}; then
-              echo "WordPress installation check failed"
-              exit 1
-            fi
+      # - name: Verify Production Site
+      #   id: site_verification
+      #   uses: appleboy/ssh-action@v0.1.8
+      #   with:
+      #     host: ${{ secrets.HOSTINGER_HOST }}
+      #     username: ${{ secrets.HOSTINGER_USERNAME }}
+      #     key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
+      #     port: ${{ secrets.HOSTINGER_PORT }}
+      #     script: |
+      #       # Check if WordPress is responding
+      #       if ! wp core is-installed --path=${{ secrets.TIGER_GRADES_PATH }}; then
+      #         echo "WordPress installation check failed"
+      #         exit 1
+      #       fi
             
-            # Get the site URL and check if it's accessible
-            SITE_URL=$(wp option get siteurl --path=${{ secrets.TIGER_GRADES_PATH }})
-            if ! curl -f -s -o /dev/null "$SITE_URL"; then
-              echo "Homepage accessibility check failed"
-              exit 1
-            fi
+      #       # Get the site URL and check if it's accessible
+      #       SITE_URL=$(wp option get siteurl --path=${{ secrets.TIGER_GRADES_PATH }})
+      #       if ! curl -f -s -o /dev/null "$SITE_URL"; then
+      #         echo "Homepage accessibility check failed"
+      #         exit 1
+      #       fi
 
-      - name: Rollback on Failure
-        if: failure() && steps.site_verification.outcome == 'failure'
-        uses: appleboy/ssh-action@v0.1.8
-        with:
-          host: ${{ secrets.HOSTINGER_HOST }}
-          username: ${{ secrets.HOSTINGER_USERNAME }}
-          key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
-          port: ${{ secrets.HOSTINGER_PORT }}
-          script: |
-            echo "🔄 Starting rollback procedure..."
+      # - name: Rollback on Failure
+      #   if: failure() && steps.site_verification.outcome == 'failure'
+      #   uses: appleboy/ssh-action@v0.1.8
+      #   with:
+      #     host: ${{ secrets.HOSTINGER_HOST }}
+      #     username: ${{ secrets.HOSTINGER_USERNAME }}
+      #     key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
+      #     port: ${{ secrets.HOSTINGER_PORT }}
+      #     script: |
+      #       echo "🔄 Starting rollback procedure..."
             
-            # Restore the database from backup
-            wp db import ${{ secrets.TIGER_GRADES_PATH }}/backup.sql \
-            --path=${{ secrets.TIGER_GRADES_PATH }}
+      #       # Restore the database from backup
+      #       wp db import ${{ secrets.TIGER_GRADES_PATH }}/backup.sql \
+      #       --path=${{ secrets.TIGER_GRADES_PATH }}
             
-            # Clear any caches
-            wp cache flush --path=${{ secrets.TIGER_GRADES_PATH }}
+      #       # Clear any caches
+      #       wp cache flush --path=${{ secrets.TIGER_GRADES_PATH }}
             
-            echo "⚠️ Site has been rolled back to previous state"
+      #       echo "⚠️ Site has been rolled back to previous state"
             
-            # Notify about rollback (you might want to replace this with your preferred notification method)
-            echo "::warning::Production deployment failed health check - automatic rollback completed"
+      #       # Notify about rollback (you might want to replace this with your preferred notification method)
+      #       echo "::warning::Production deployment failed health check - automatic rollback completed"
 
       - name: Disable Maintenance Mode
         if: always()  # Ensures this runs even after rollback

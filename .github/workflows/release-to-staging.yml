@@ -18,6 +18,21 @@ jobs:
           known_hosts: ${{ secrets.HOSTINGER_KNOWN_HOSTS }}
           name: ${{ secrets.HOSTINGER_KEY_TYPE }}
 
+      # Content Sync steps
+      - name: Sync Content from Release to Staging
+        uses: appleboy/ssh-action@v0.1.8
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
+          port: ${{ secrets.HOSTINGER_PORT }}
+          script: |
+            rsync -avz --delete ${{ secrets.TIGER_GRADES_PATH }}/release/themes/ ${{ secrets.TIGER_GRADES_PATH }}/staging/themes/
+            rsync -avz --delete ${{ secrets.TIGER_GRADES_PATH }}/release/plugins/ ${{ secrets.TIGER_GRADES_PATH }}/staging/plugins/
+            rsync -avz --delete ${{ secrets.TIGER_GRADES_PATH }}/release/uploads/ ${{ secrets.TIGER_GRADES_PATH }}/staging/uploads/
+            rsync -avz --delete ${{ secrets.TIGER_GRADES_PATH }}/release/languages/ ${{ secrets.TIGER_GRADES_PATH }}/staging/languages/
+            rsync -avz --delete ${{ secrets.TIGER_GRADES_PATH }}/release/mu-plugins/ ${{ secrets.TIGER_GRADES_PATH }}/staging/mu-plugins/
+
       # Backup steps
       - name: Export Staging Backup
         uses: appleboy/ssh-action@v0.1.8

@@ -6,8 +6,6 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    env:
-      ENCRYPTION_PASSWORD: ${{ secrets.TIGER_GRADES_ENCRYPTION_PASSWORD }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -42,6 +40,8 @@ jobs:
             gzip -f backup.sql
       - name: Encrypt Staging Backup
         uses: ./.github/actions/encrypt
+        env:
+          ENCRYPTION_PASSWORD: ${{ secrets.TIGER_GRADES_ENCRYPTION_PASSWORD }}
         with:
           host: ${{ secrets.HOSTINGER_HOST }}
           username: ${{ secrets.HOSTINGER_USERNAME }}
@@ -69,6 +69,8 @@ jobs:
             gzip -f migration.sql
       - name: Encrypt Release Migration
         uses: ./.github/actions/encrypt
+        env:
+          ENCRYPTION_PASSWORD: ${{ secrets.TIGER_GRADES_ENCRYPTION_PASSWORD }}
         with:
           host: ${{ secrets.HOSTINGER_HOST }}
           username: ${{ secrets.HOSTINGER_USERNAME }}
@@ -98,10 +100,9 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
       - name: Commit and Push changes
-        run: |
-          git add .
-          git commit -m "Add staging backup"
-          git push origin HEAD:${{ github.ref }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        
+        run: |
+          git add .
+          git commit -m "Migrate Release Candidate to Staging Workflow"
+          git push origin HEAD:${{ github.ref }}

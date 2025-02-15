@@ -136,6 +136,22 @@ jobs:
           script: |
             wp maintenance-mode deactivate --path=${{ secrets.TIGER_GRADES_PATH }}
 
+      # Clear cache in target environment
+      - name: Clear Cache in Staging
+        uses: appleboy/ssh-action@v0.1.8
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
+          port: ${{ secrets.HOSTINGER_PORT }}
+          script: |
+            # Clear WordPress object cache
+            wp cache flush --path=${{ secrets.TIGER_GRADES_PATH }}
+            # Clear WordPress transients
+            wp transient delete --all --path=${{ secrets.TIGER_GRADES_PATH }}
+            # Clear rewrite rules and regenerate
+            wp rewrite flush --hard --path=${{ secrets.TIGER_GRADES_PATH }}
+
       # Artifact handling steps
       ## Backup
       - name: Compress Production Backup

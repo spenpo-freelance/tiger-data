@@ -70,6 +70,22 @@ jobs:
             wp db import ${{ secrets.TIGER_GRADES_PATH }}/staging/migration.sql \
             --path=${{ secrets.TIGER_GRADES_PATH }}/staging
 
+      # Clear cache in target environment
+      - name: Clear Cache in Staging
+        uses: appleboy/ssh-action@v0.1.8
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
+          port: ${{ secrets.HOSTINGER_PORT }}
+          script: |
+            # Clear WordPress object cache
+            wp cache flush --path=${{ secrets.TIGER_GRADES_PATH }}/staging
+            # Clear WordPress transients
+            wp transient delete --all --path=${{ secrets.TIGER_GRADES_PATH }}/staging
+            # Clear rewrite rules and regenerate
+            wp rewrite flush --hard --path=${{ secrets.TIGER_GRADES_PATH }}/staging
+
       # Artifact handling steps
       ## Backup
       - name: Compress Staging Backup

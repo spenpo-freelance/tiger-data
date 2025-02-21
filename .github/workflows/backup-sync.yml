@@ -49,6 +49,7 @@ jobs:
           script: |
             wp option get siteurl --path=$SOURCE_PATH
             wp option get siteurl --path=$TARGET_PATH
+          script_stop: true
 
       - name: Set environment variables
         run: |
@@ -111,8 +112,7 @@ jobs:
           key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
           port: ${{ secrets.HOSTINGER_PORT }}
           script: |
-            wp db import ${{ env.TARGET_PATH }}/migration.sql \
-            --path=${{ env.TARGET_PATH }}
+            wp db import ${{ env.TARGET_PATH }}/migration.sql --path=${{ env.TARGET_PATH }}
 
       - name: Disable Maintenance Mode
         if: always()  # Ensures this runs even after rollback

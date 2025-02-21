@@ -1,0 +1,212 @@
+name: WordPress Environment Migration
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_env:
+        description: 'Source environment (release/staging)'
+        required: true
+        type: choice
+        options:
+          - release
+          - staging
+      target_env:
+        description: 'Target environment (staging/production)'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+
+jobs:
+  deploy-and-backup:
+    runs-on: ubuntu-latest
+    env:
+      SOURCE_PATH: ${{ secrets.TIGER_GRADES_PATH }}/${{ inputs.source_env }}
+      TARGET_PATH: ${{ secrets.TIGER_GRADES_PATH }}${{ inputs.target_env == 'production' && '' || '/staging' }}
+
+    steps:
+      # Setup steps
+      - name: Checkout Code
+        uses: actions/checkout@v3
+        
+      - name: Install SSH key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
+          known_hosts: ${{ secrets.HOSTINGER_KNOWN_HOSTS }}
+          name: ${{ secrets.HOSTINGER_KEY_TYPE }}
+
+      - name: Set Domain Variables
+        uses: appleboy/ssh-action@v0.1.8
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
+          port: ${{ secrets.HOSTINGER_PORT }}
+          script: |
+            echo "SOURCE_DOMAIN=$(wp option get siteurl --path=${{ env.SOURCE_PATH }})" >> $GITHUB_ENV
+            echo "TARGET_DOMAIN=$(wp option get siteurl --path=${{ env.TARGET_PATH }})" >> $GITHUB_ENV
+
+      - name: Enable Maintenance Mode
+        uses: appleboy/ssh-action@v0.1.8
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
+          port: ${{ secrets.HOSTINGER_PORT }}
+          script: |
+            wp maintenance-mode activate --path=${{ env.TARGET_PATH }}
+
+      - name: Sync Content
+        uses: appleboy/ssh-action@v0.1.8
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
+          port: ${{ secrets.HOSTINGER_PORT }}
+          script: |
+            rsync -avz --delete ${{ env.SOURCE_PATH }}/wp-content/themes/ ${{ env.TARGET_PATH }}/wp-content/themes/
+            rsync -avz --delete ${{ env.SOURCE_PATH }}/wp-content/plugins/ ${{ env.TARGET_PATH }}/wp-content/plugins/
+            rsync -avz --delete ${{ env.SOURCE_PATH }}/wp-content/uploads/ ${{ env.TARGET_PATH }}/wp-content/uploads/
+            rsync -avz --delete ${{ env.SOURCE_PATH }}/wp-content/languages/ ${{ env.TARGET_PATH }}/wp-content/languages/
+            rsync -avz --delete ${{ env.SOURCE_PATH }}/wp-content/mu-plugins/ ${{ env.TARGET_PATH }}/wp-content/mu-plugins/
+
+      - name: Export Target Backup
+        uses: appleboy/ssh-action@v0.1.8
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
+          port: ${{ secrets.HOSTINGER_PORT }}
+          script: |
+            wp db export ${{ env.TARGET_PATH }}/backup.sql --path=${{ env.TARGET_PATH }}
+
+      - name: Content Segmentation
+        uses: appleboy/ssh-action@v0.1.8
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
+          port: ${{ secrets.HOSTINGER_PORT }}
+          script: |
+            wp search-replace "${{ env.SOURCE_DOMAIN }}" "${{ env.TARGET_DOMAIN }}" \
+            --export=${{ env.TARGET_PATH }}/migration.sql \
+            --path=${{ env.SOURCE_PATH }} \
+            --skip-columns=guid \
+            --skip-tables=wp_comments,wp_commentmeta,wp_lightspeed_url,wp_lightspeed_url_file,wp_user_registration_sessions
+            
+      - name: Import Source Migration to Target
+        uses: appleboy/ssh-action@v0.1.8
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
+          port: ${{ secrets.HOSTINGER_PORT }}
+          script: |
+            wp db import ${{ env.TARGET_PATH }}/migration.sql \
+            --path=${{ env.TARGET_PATH }}
+
+      - name: Disable Maintenance Mode
+        if: always()  # Ensures this runs even after rollback
+        uses: appleboy/ssh-action@v0.1.8
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
+          port: ${{ secrets.HOSTINGER_PORT }}
+          script: |
+            wp maintenance-mode deactivate --path=${{ env.TARGET_PATH }}
+
+      # Clear cache in target environment
+      - name: Clear Cache in Target
+        uses: appleboy/ssh-action@v0.1.8
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
+          port: ${{ secrets.HOSTINGER_PORT }}
+          script: |
+            # Clear WordPress object cache
+            wp cache flush --path=${{ env.TARGET_PATH }}
+            # Clear WordPress transients
+            wp transient delete --all --path=${{ env.TARGET_PATH }}
+            # Clear rewrite rules and regenerate
+            wp rewrite flush --hard --path=${{ env.TARGET_PATH }}
+
+      # Artifact handling steps
+      ## Backup
+      - name: Compress Target Backup
+        uses: ./.github/actions/compress
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
+          port: ${{ secrets.HOSTINGER_PORT }}
+          path: ${{ env.TARGET_PATH }}
+          file: backup.sql
+
+      - name: Encrypt Target Backup
+        uses: ./.github/actions/encrypt
+        env:
+          ENCRYPTION_PASSWORD: ${{ secrets.TIGER_GRADES_ENCRYPTION_PASSWORD }}
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
+          port: ${{ secrets.HOSTINGER_PORT }}
+          file: ${{ env.TARGET_PATH }}/backup.sql.gz
+          
+      - name: Transfer Target Backup to GitHub Runner
+        uses: ./.github/actions/scp
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          key_type: ${{ secrets.HOSTINGER_KEY_TYPE }}
+          port: ${{ secrets.HOSTINGER_PORT }}
+          remote_path: ${{ env.TARGET_PATH }}
+          source_path: ./backup/${{ inputs.target_env }}
+          file: backup.sql.gz.enc
+
+      ## Migration
+      - name: Compress Source Migration
+        uses: ./.github/actions/compress
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
+          port: ${{ secrets.HOSTINGER_PORT }}
+          path: ${{ env.TARGET_PATH }}
+          file: migration.sql
+
+      - name: Encrypt Source Migration
+        uses: ./.github/actions/encrypt
+        env:
+          ENCRYPTION_PASSWORD: ${{ secrets.TIGER_GRADES_ENCRYPTION_PASSWORD }}
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
+          port: ${{ secrets.HOSTINGER_PORT }}
+          file: ${{ env.TARGET_PATH }}/migration.sql.gz
+
+      - name: Transfer Source Migration to GitHub Runner
+        uses: ./.github/actions/scp
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          key_type: ${{ secrets.HOSTINGER_KEY_TYPE }}
+          port: ${{ secrets.HOSTINGER_PORT }}
+          remote_path: ${{ env.TARGET_PATH }}
+          source_path: ./migration/${{ inputs.source_env }}
+          file: migration.sql.gz.enc
+
+      - name: Configure Git and Push Changes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "backup ${{ inputs.target_env }} and sync with ${{ inputs.source_env }}"
+          git push origin HEAD:${{ github.ref }}

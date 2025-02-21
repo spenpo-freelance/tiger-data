@@ -1,0 +1,3 @@
+kind: Changed
+body: access domain name through secrets instead of wp get siteurl
+time: 2025-02-21T22:17:03.406485+08:00

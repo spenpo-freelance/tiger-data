@@ -1,4 +1,4 @@
-name: WordPress Environment Migration
+name: Hostinger WordPress Backup Sync
 
 on:
   workflow_dispatch:
@@ -19,11 +19,13 @@ on:
           - production
 
 jobs:
-  deploy-and-backup:
+  backup-and-sync:
     runs-on: ubuntu-latest
     env:
       SOURCE_PATH: ${{ secrets.TIGER_GRADES_PATH }}/${{ inputs.source_env }}
       TARGET_PATH: ${{ secrets.TIGER_GRADES_PATH }}${{ inputs.target_env == 'production' && '' || '/staging' }}
+      SOURCE_DOMAIN: ${{ inputs.source_env }}.${{ secrets.TIGER_GRADES_DOMAIN }}
+      TARGET_DOMAIN: ${{ inputs.target_env == 'production' && '' || 'staging.' }}${{ secrets.TIGER_GRADES_DOMAIN }}
 
     steps:
       # Setup steps
@@ -36,33 +38,6 @@ jobs:
           key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
           known_hosts: ${{ secrets.HOSTINGER_KNOWN_HOSTS }}
           name: ${{ secrets.HOSTINGER_KEY_TYPE }}
-
-      - name: Set Domain Variables
-        id: get_domains
-        uses: appleboy/ssh-action@v0.1.8
-        with:
-          host: ${{ secrets.HOSTINGER_HOST }}
-          username: ${{ secrets.HOSTINGER_USERNAME }}
-          key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
-          port: ${{ secrets.HOSTINGER_PORT }}
-          envs: SOURCE_PATH,TARGET_PATH
-          command_timeout: 20m
-          script: |
-            wp option get siteurl --path=$SOURCE_PATH
-            wp option get siteurl --path=$TARGET_PATH
-          script_stop: true
-
-      - name: Debug Output
-        run: |
-          echo "Full response: ${{ steps.get_domains.outputs.response }}"
-          echo "All outputs:"
-          echo "${{ toJSON(steps.get_domains.outputs) }}"
-
-      - name: Set environment variables
-        run: |
-          readarray -t domains <<< "${{ steps.get_domains.outputs.response }}"
-          echo "SOURCE_DOMAIN=${domains[0]}" >> $GITHUB_ENV
-          echo "TARGET_DOMAIN=${domains[1]}" >> $GITHUB_ENV
 
       - name: Enable Maintenance Mode
         uses: appleboy/ssh-action@v0.1.8

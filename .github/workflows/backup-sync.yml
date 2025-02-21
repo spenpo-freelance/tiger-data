@@ -53,6 +53,12 @@ jobs:
             echo "$target_domain"
           script_stop: true
 
+      - name: Debug Output
+        run: |
+          echo "Full response: ${{ steps.get_domains.outputs.response }}"
+          echo "All outputs:"
+          echo "${{ toJSON(steps.get_domains.outputs) }}"
+
       - name: Set environment variables
         run: |
           readarray -t domains <<< "${{ steps.get_domains.outputs.response }}"

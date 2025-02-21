@@ -46,11 +46,10 @@ jobs:
           key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
           port: ${{ secrets.HOSTINGER_PORT }}
           envs: SOURCE_PATH,TARGET_PATH
+          command_timeout: 20m
           script: |
-            source_domain=$(wp option get siteurl --path=$SOURCE_PATH)
-            target_domain=$(wp option get siteurl --path=$TARGET_PATH)
-            echo "$source_domain"
-            echo "$target_domain"
+            wp option get siteurl --path=$SOURCE_PATH
+            wp option get siteurl --path=$TARGET_PATH
           script_stop: true
 
       - name: Debug Output

@@ -188,7 +188,7 @@ jobs:
           key_type: ${{ secrets.HOSTINGER_KEY_TYPE }}
           port: ${{ secrets.HOSTINGER_PORT }}
           remote_path: ${{ env.TARGET_PATH }}
-          source_path: ./migration/${{ inputs.source_env }}
+          source_path: ./migration/${{ inputs.target_env }}
           file: migration.sql.gz.enc
 
       - name: Configure Git and Push Changes

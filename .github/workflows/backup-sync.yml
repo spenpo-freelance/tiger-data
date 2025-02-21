@@ -29,12 +29,13 @@ jobs:
         with:
           source_env: ${{ github.event.inputs.source_env }}
           target_env: ${{ github.event.inputs.target_env }}
-          base_path: '${{ secrets.TIGER_GRADES_PATH }}'
+          base_path: ${{ secrets.TIGER_GRADES_PATH }}
           domain: ${{ secrets.TIGER_GRADES_DOMAIN }}
-          ssh_host: '${{ secrets.HOSTINGER_HOST }}'
-          ssh_username: '${{ secrets.HOSTINGER_USERNAME }}'
-          ssh_private_key: '${{ secrets.HOSTINGER_PRIVATE_KEY }}'
-          ssh_known_hosts: '${{ secrets.HOSTINGER_KNOWN_HOSTS }}'
-          ssh_key_type: '${{ secrets.HOSTINGER_KEY_TYPE }}'
-          ssh_port: '${{ secrets.HOSTINGER_PORT }}'
-          encryption_password: '${{ secrets.TIGER_GRADES_ENCRYPTION_PASSWORD }}'
+          ssh_host: ${{ secrets.HOSTINGER_HOST }}
+          ssh_username: ${{ secrets.HOSTINGER_USERNAME }}
+          ssh_private_key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
+          ssh_known_hosts: ${{ secrets.HOSTINGER_KNOWN_HOSTS }}
+          ssh_key_type: ${{ secrets.HOSTINGER_KEY_TYPE }}
+          ssh_port: ${{ secrets.HOSTINGER_PORT }}
+          encryption_password: ${{ secrets.TIGER_GRADES_ENCRYPTION_PASSWORD }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}

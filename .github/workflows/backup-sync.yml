@@ -47,14 +47,17 @@ jobs:
           port: ${{ secrets.HOSTINGER_PORT }}
           envs: SOURCE_PATH,TARGET_PATH
           script: |
-            wp option get siteurl --path=$SOURCE_PATH
-            wp option get siteurl --path=$TARGET_PATH
+            source_domain=$(wp option get siteurl --path=$SOURCE_PATH)
+            target_domain=$(wp option get siteurl --path=$TARGET_PATH)
+            echo "$source_domain"
+            echo "$target_domain"
           script_stop: true
 
       - name: Set environment variables
         run: |
-          echo "SOURCE_DOMAIN=${{ steps.get_domains.outputs.stdout }}" >> $GITHUB_ENV
-          echo "TARGET_DOMAIN=${{ steps.get_domains.outputs.stderr }}" >> $GITHUB_ENV
+          readarray -t domains <<< "${{ steps.get_domains.outputs.response }}"
+          echo "SOURCE_DOMAIN=${domains[0]}" >> $GITHUB_ENV
+          echo "TARGET_DOMAIN=${domains[1]}" >> $GITHUB_ENV
 
       - name: Enable Maintenance Mode
         uses: appleboy/ssh-action@v0.1.8

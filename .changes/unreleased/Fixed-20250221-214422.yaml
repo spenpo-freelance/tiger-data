@@ -1,0 +1,4 @@
+kind: Fixed
+body: changed approach to getting domains from remote server. accessing outputs through
+  appleboy's supoorted "response" variable
+time: 2025-02-21T21:44:22.908059+08:00

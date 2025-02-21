@@ -38,15 +38,22 @@ jobs:
           name: ${{ secrets.HOSTINGER_KEY_TYPE }}
 
       - name: Set Domain Variables
+        id: get_domains
         uses: appleboy/ssh-action@v0.1.8
         with:
           host: ${{ secrets.HOSTINGER_HOST }}
           username: ${{ secrets.HOSTINGER_USERNAME }}
           key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
           port: ${{ secrets.HOSTINGER_PORT }}
+          envs: SOURCE_PATH,TARGET_PATH
           script: |
-            echo "SOURCE_DOMAIN=$(wp option get siteurl --path=${{ env.SOURCE_PATH }})" >> $GITHUB_ENV
-            echo "TARGET_DOMAIN=$(wp option get siteurl --path=${{ env.TARGET_PATH }})" >> $GITHUB_ENV
+            wp option get siteurl --path=$SOURCE_PATH
+            wp option get siteurl --path=$TARGET_PATH
+
+      - name: Set environment variables
+        run: |
+          echo "SOURCE_DOMAIN=${{ steps.get_domains.outputs.stdout }}" >> $GITHUB_ENV
+          echo "TARGET_DOMAIN=${{ steps.get_domains.outputs.stderr }}" >> $GITHUB_ENV
 
       - name: Enable Maintenance Mode
         uses: appleboy/ssh-action@v0.1.8

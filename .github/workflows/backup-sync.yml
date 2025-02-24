@@ -16,6 +16,19 @@ on:
         options:
           - staging
           - production
+      migrate_users:
+        description: 'Users will be migrated from source to target environment'
+        required: false
+        type: boolean
+        default: false
+      additional_skip_tables:
+        description: 'Additional tables to skip (comma-separated)'
+        required: false
+        type: string
+      additional_sync_dirs:
+        description: 'Additional directories to sync (comma-separated)'
+        required: false
+        type: string
 
 jobs:
   sync:
@@ -39,3 +52,16 @@ jobs:
           ssh_port: ${{ secrets.HOSTINGER_PORT }}
           encryption_password: ${{ secrets.TIGER_GRADES_ENCRYPTION_PASSWORD }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          skip_tables: ${{ 
+              format('{0}{1}{2}',
+                'wp_comments,wp_commentmeta,wp_lightspeed_url,wp_lightspeed_url_file,wp_user_registration_sessions',
+                github.event.inputs.additional_skip_tables != '' && format(',{0}', github.event.inputs.additional_skip_tables) || '',
+                github.event.inputs.migrate_users && '' || ',wp_users,wp_usermeta'
+                )
+            }}
+          sync_content_dirs: ${{
+              format('{0}{1}',
+                'themes,plugins,uploads,mu-plugins,languages',
+                github.event.inputs.additional_sync_dirs != '' && format(',{0}', github.event.inputs.additional_sync_dirs) || ''
+              )
+            }}

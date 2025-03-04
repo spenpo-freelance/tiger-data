@@ -54,7 +54,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           skip_tables: ${{ 
               format('{0}{1}{2}',
-                'wp_comments,wp_commentmeta,wp_lightspeed_url,wp_lightspeed_url_file,wp_user_registration_sessions',
+                'wp_comments,wp_commentmeta,wp_litespeed_url,wp_litespeed_url_file,wp_user_registration_sessions',
                 github.event.inputs.additional_skip_tables != '' && format(',{0}', github.event.inputs.additional_skip_tables) || '',
                 github.event.inputs.migrate_users && '' || ',wp_users,wp_usermeta'
               )
@@ -65,4 +65,4 @@ jobs:
                 github.event.inputs.additional_sync_dirs != '' && format(',{0}', github.event.inputs.additional_sync_dirs) || ''
               )
             }}
-          clear_cache_commands: 'flush,transients,rewrite,lightspeed'
+          clear_cache_commands: 'flush,transients,rewrite,litespeed'

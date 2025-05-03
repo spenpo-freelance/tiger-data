@@ -26,7 +26,11 @@ on:
         required: false
         type: string
       additional_sync_dirs:
-        description: 'Additional directories to sync (comma-separated)'
+        description: 'Additional directories or files to sync (comma-separated)'
+        required: false
+        type: string
+      post_deploy_scripts:
+        description: 'scripts to be run post deployment (comma-separated)'
         required: false
         type: string
 
@@ -66,3 +70,28 @@ jobs:
               )
             }}
           clear_cache_commands: 'flush,transients,rewrite,litespeed'
+      - name: Post Deploy Activities
+        uses: appleboy/ssh-action@v0.1.8
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
+          port: ${{ secrets.HOSTINGER_PORT }}
+          script: |
+            for script in ${{ github.event.inputs.post_deploy_scripts }}; do
+              echo "Validating script: $script"
+              if [ ! -e "${{ secrets.TIGER_GRADES_PATH }}/$script" ]; then
+                echo "Script $script does not exist"
+                exit 1
+              fi
+
+              echo "$script exists. Supported file types: .php"
+              if [ "${script##*.}" != "php" ]; then
+                echo "File type not supported"
+                exit 1
+              fi
+
+              echo "Validation passed. Executing script..."
+              php ${{ secrets.TIGER_GRADES_PATH }}/$script
+            done
+

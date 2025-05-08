@@ -1,0 +1,3 @@
+kind: Changed
+body: moved post deploy activities to a separate job in the workflow
+time: 2025-05-08T15:22:36.193239+08:00

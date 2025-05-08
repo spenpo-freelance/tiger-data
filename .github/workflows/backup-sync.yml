@@ -70,6 +70,12 @@ jobs:
               )
             }}
           clear_cache_commands: 'flush,transients,rewrite,litespeed'
+
+  post-deploy:
+    needs: sync
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.post_deploy_scripts != '' }}
+    steps:
       - name: Post Deploy Activities
         uses: appleboy/ssh-action@v0.1.8
         with:

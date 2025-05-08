@@ -78,20 +78,43 @@ jobs:
           key: ${{ secrets.HOSTINGER_PRIVATE_KEY }}
           port: ${{ secrets.HOSTINGER_PORT }}
           script: |
-            for script in ${{ github.event.inputs.post_deploy_scripts }}; do
+            IFS=',' read -ra scripts <<< "${{ github.event.inputs.post_deploy_scripts }}"
+            for script in "${scripts[@]}"; do
               echo "Validating script: $script"
               if [ ! -e "${{ secrets.TIGER_GRADES_PATH }}/$script" ]; then
                 echo "Script $script does not exist"
                 exit 1
               fi
 
-              echo "$script exists. Supported file types: .php"
-              if [ "${script##*.}" != "php" ]; then
-                echo "File type not supported"
+              echo "$script exists. Supported file types: .php, .sql"
+              
+              # Define array of supported file types
+              supported_extensions=("php" "sql")
+              
+              # Get file extension and convert to lowercase
+              file_extension="${script##*.}"
+              file_extension="${file_extension,,}"
+              
+              # Check if extension is supported
+              is_supported=false
+              for ext in "${supported_extensions[@]}"; do
+                if [ "$file_extension" = "$ext" ]; then
+                  is_supported=true
+                  break
+                fi
+              done
+              
+              if [ "$is_supported" = false ]; then
+                echo "File type not supported. Supported types: ${supported_extensions[*]}"
                 exit 1
               fi
 
               echo "Validation passed. Executing script..."
-              php ${{ secrets.TIGER_GRADES_PATH }}/$script
+              if [ "$file_extension" = "php" ]; then
+                php ${{ secrets.TIGER_GRADES_PATH }}/$script
+              elif [ "$file_extension" = "sql" ]; then
+                cd ${{ secrets.TIGER_GRADES_PATH }}
+                wp db import $script
+              fi
             done
 

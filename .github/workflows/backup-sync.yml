@@ -41,12 +41,20 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      - name: Set Environment Variables
+        run: |
+          if [ "${{ github.event.inputs.target_env }}" = "production" ]; then
+            echo "TARGET_PATH=${{ secrets.TIGER_GRADES_PATH }}" >> $GITHUB_ENV
+          else
+            echo "TARGET_PATH=${{ secrets.TIGER_GRADES_PATH }}/${{ github.event.inputs.target_env }}" >> $GITHUB_ENV
+          fi
+          echo "SOURCE_PATH=${{ secrets.TIGER_GRADES_PATH }}/${{ github.event.inputs.source_env }}" >> $GITHUB_ENV
+
       - name: Backup Sync
         uses: spope851/wp-env-backup-sync@v1
         with:
-          source_env: ${{ github.event.inputs.source_env }}
-          target_env: ${{ github.event.inputs.target_env }}
-          base_path: ${{ secrets.TIGER_GRADES_PATH }}
+          source_path: ${{ env.SOURCE_PATH }}
+          target_path: ${{ env.TARGET_PATH }}
           domain: ${{ secrets.TIGER_GRADES_DOMAIN }}
           ssh_host: ${{ secrets.HOSTINGER_HOST }}
           ssh_username: ${{ secrets.HOSTINGER_USERNAME }}
@@ -87,7 +95,7 @@ jobs:
             IFS=',' read -ra scripts <<< "${{ github.event.inputs.post_deploy_scripts }}"
             for script in "${scripts[@]}"; do
               echo "Validating script: $script"
-              if [ ! -e "${{ secrets.TIGER_GRADES_PATH }}/$script" ]; then
+              if [ ! -e "${{ env.TARGET_PATH }}/$script" ]; then
                 echo "Script $script does not exist"
                 exit 1
               fi
@@ -117,9 +125,9 @@ jobs:
 
               echo "Validation passed. Executing script..."
               if [ "$file_extension" = "php" ]; then
-                php ${{ secrets.TIGER_GRADES_PATH }}/$script
+                php ${{ env.TARGET_PATH }}/$script
               elif [ "$file_extension" = "sql" ]; then
-                cd ${{ secrets.TIGER_GRADES_PATH }}
+                cd ${{ env.TARGET_PATH }}
                 wp db import $script
               fi
             done

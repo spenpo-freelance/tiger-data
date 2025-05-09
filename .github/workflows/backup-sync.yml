@@ -57,6 +57,8 @@ jobs:
         run: |
           echo "Checking job outputs:"
           echo "target_path = ${{ steps.set-env.outputs.target_path }}"
+          echo "All outputs from set-env step:"
+          echo "${{ toJSON(steps.set-env.outputs) }}"
 
       - name: Backup Sync
         uses: spope851/wp-env-backup-sync@v1
@@ -98,6 +100,10 @@ jobs:
         run: |
           echo "Checking outputs from sync job:"
           echo "target_path = ${{ needs.sync.outputs.target_path }}"
+          echo "All outputs from sync job:"
+          echo "${{ toJSON(needs.sync.outputs) }}"
+          echo "All needs context:"
+          echo "${{ toJSON(needs) }}"
 
       - name: Post Deploy Activities
         uses: appleboy/ssh-action@v0.1.8

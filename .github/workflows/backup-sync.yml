@@ -37,6 +37,8 @@ on:
 jobs:
   sync:
     runs-on: ubuntu-latest
+    outputs:
+      target_path: ${{ steps.set-env.outputs.target_path }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -59,6 +61,8 @@ jobs:
           echo "target_path = ${{ steps.set-env.outputs.target_path }}"
           echo "All outputs from set-env step:"
           echo "${{ toJSON(steps.set-env.outputs) }}"
+          echo "All job outputs:"
+          echo "${{ toJSON(github.outputs) }}"
 
       - name: Backup Sync
         uses: spope851/wp-env-backup-sync@v1

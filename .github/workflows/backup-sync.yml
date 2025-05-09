@@ -42,6 +42,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Set Environment Variables
+        id: set-env
         run: |
           if [ "${{ github.event.inputs.target_env }}" = "production" ]; then
             echo "TARGET_PATH=${{ secrets.TIGER_GRADES_PATH }}" >> $GITHUB_ENV
@@ -51,6 +52,11 @@ jobs:
             echo "target_path=${{ secrets.TIGER_GRADES_PATH }}/${{ github.event.inputs.target_env }}" >> $GITHUB_OUTPUT
           fi
           echo "SOURCE_PATH=${{ secrets.TIGER_GRADES_PATH }}/${{ github.event.inputs.source_env }}" >> $GITHUB_ENV
+
+      - name: Debug Outputs
+        run: |
+          echo "Checking job outputs:"
+          echo "target_path = ${{ steps.set-env.outputs.target_path }}"
 
       - name: Backup Sync
         uses: spope851/wp-env-backup-sync@v1
@@ -88,6 +94,11 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.post_deploy_scripts != '' }}
     steps:
+      - name: Debug Job Outputs
+        run: |
+          echo "Checking outputs from sync job:"
+          echo "target_path = ${{ needs.sync.outputs.target_path }}"
+
       - name: Post Deploy Activities
         uses: appleboy/ssh-action@v0.1.8
         with:

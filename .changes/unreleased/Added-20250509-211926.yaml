@@ -1,0 +1,3 @@
+kind: Added
+body: source_env and target_env back to Backup Sync step to restore default domain functionality
+time: 2025-05-09T21:19:26.764641+08:00

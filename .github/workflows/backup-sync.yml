@@ -45,8 +45,10 @@ jobs:
         run: |
           if [ "${{ github.event.inputs.target_env }}" = "production" ]; then
             echo "TARGET_PATH=${{ secrets.TIGER_GRADES_PATH }}" >> $GITHUB_ENV
+            echo "target_path=${{ secrets.TIGER_GRADES_PATH }}" >> $GITHUB_OUTPUT
           else
             echo "TARGET_PATH=${{ secrets.TIGER_GRADES_PATH }}/${{ github.event.inputs.target_env }}" >> $GITHUB_ENV
+            echo "target_path=${{ secrets.TIGER_GRADES_PATH }}/${{ github.event.inputs.target_env }}" >> $GITHUB_OUTPUT
           fi
           echo "SOURCE_PATH=${{ secrets.TIGER_GRADES_PATH }}/${{ github.event.inputs.source_env }}" >> $GITHUB_ENV
 
@@ -97,7 +99,7 @@ jobs:
             IFS=',' read -ra scripts <<< "${{ github.event.inputs.post_deploy_scripts }}"
             for script in "${scripts[@]}"; do
               echo "Validating script: $script"
-              if [ ! -e "${{ env.TARGET_PATH }}/$script" ]; then
+              if [ ! -e "${{ needs.sync.outputs.target_path }}/$script" ]; then
                 echo "Script $script does not exist"
                 exit 1
               fi
@@ -127,9 +129,9 @@ jobs:
 
               echo "Validation passed. Executing script..."
               if [ "$file_extension" = "php" ]; then
-                php ${{ env.TARGET_PATH }}/$script
+                php ${{ needs.sync.outputs.target_path }}/$script
               elif [ "$file_extension" = "sql" ]; then
-                cd ${{ env.TARGET_PATH }}
+                cd ${{ needs.sync.outputs.target_path }}
                 wp db import $script
               fi
             done

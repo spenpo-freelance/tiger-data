@@ -51,6 +51,8 @@ jobs:
       - name: Backup Sync
         uses: spope851/wp-env-backup-sync@v1
         with:
+          source_env: ${{ github.event.inputs.source_env }}
+          target_env: ${{ github.event.inputs.target_env }}
           source_path: ${{ env.SOURCE_PATH }}
           target_path: ${{ env.TARGET_PATH }}
           domain: ${{ secrets.TIGER_GRADES_DOMAIN }}

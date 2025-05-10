@@ -14,6 +14,7 @@ runs:
   using: "composite"
   steps:
     - name: Set Target and Source Paths
+      shell: bash
       run: |
         if [ "${{ inputs.target_env }}" = "production" ]; then
           echo "TARGET_PATH=${{ inputs.path }}" >> $GITHUB_ENV

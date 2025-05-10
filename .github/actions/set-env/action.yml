@@ -1,0 +1,23 @@
+name: "Set Environment Variables"
+description: "Set environment variables for the job"
+inputs:
+  path:
+    description: "Path to WordPress installation"
+    required: true
+  source_env:
+    description: "Source environment name"
+    required: true
+  target_env:
+    description: "Target environment name"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Set Target and Source Paths
+      run: |
+        if [ "${{ inputs.target_env }}" = "production" ]; then
+          echo "TARGET_PATH=${{ inputs.path }}" >> $GITHUB_ENV
+        else
+          echo "TARGET_PATH=${{ inputs.path }}/${{ inputs.target_env }}" >> $GITHUB_ENV
+        fi
+        echo "SOURCE_PATH=${{ inputs.path }}/${{ inputs.source_env }}" >> $GITHUB_ENV

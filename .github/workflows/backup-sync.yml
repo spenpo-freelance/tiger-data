@@ -66,7 +66,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           skip_tables: ${{ 
               format('{0}{1}{2}',
-                'wp_comments,wp_commentmeta,wp_litespeed_url,wp_litespeed_url_file,wp_user_registration_sessions',
+                'wp_comments,wp_commentmeta,wp_litespeed_url,wp_litespeed_url_file,wp_user_registration_sessions,wp_tigr_classes,wp_tigr_class_types,wp_tigr_enrollments,wp_tigr_feature_lookup,wp_tigr_range_options_junction,wp_tigr_migrations,wp_tigr_range_options,wp_tigr_secured_routes_junction,wp_wpmailsmtp_debug_events',
                 github.event.inputs.additional_skip_tables != '' && format(',{0}', github.event.inputs.additional_skip_tables) || '',
                 github.event.inputs.migrate_users && '' || ',wp_users,wp_usermeta'
               )
